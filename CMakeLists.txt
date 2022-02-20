@@ -27,6 +27,7 @@ set(easy_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/easy_board.h
 
 set(easy_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 ${CMAKE_CURRENT_SOURCE_DIR}/src/rpa_queue.c
+${CMAKE_CURRENT_SOURCE_DIR}/src/msg_queue.c
 ) 
 
 add_executable(easyb ${easy_srcs})
