@@ -1,0 +1,15 @@
+{
+    "Data": {
+        "Name": "vc1000",
+        "DevId": "TEST-001",
+        "Types": "type1|type2",
+        "Areas": "area1|area2",
+        "Audio": {
+            "Volumn": 200
+        },
+        "Server": {
+            "Ip": "192.168.3.104",
+            "Port": 1883
+        }
+    }
+}

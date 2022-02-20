@@ -26,9 +26,10 @@ set(easy_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/easy_board.h
 )
 
 set(easy_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+${CMAKE_CURRENT_SOURCE_DIR}/src/rpa_queue.c
 ) 
 
 add_executable(easyb ${easy_srcs})
-target_link_libraries(easyb mdm cjson paho-mqtt3c)
+target_link_libraries(easyb mdm cjson paho-mqtt3c pthread)
 
 

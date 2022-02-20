@@ -1,0 +1,59 @@
+{
+    "Data": {
+        "@attr": {
+            "mtype": "container"
+        },
+        "Name": {
+            "@attr": {
+                "mtype": "leaf",
+                "dtype": "string"
+            }
+        },
+        "DevId": {
+            "@attr": {
+                "mtype": "leaf",
+                "dtype": "string"
+            }
+        },
+        "Types": {
+            "@attr": {
+                "mtype": "leaf",
+                "dtype": "string"
+            }
+        },
+        "Areas": {
+            "@attr": {
+                "mtype": "leaf",
+                "dtype": "string"
+            }
+        },
+        "Audio": {
+            "@attr": {
+                "mtype": "container"
+            },
+            "Volumn": {
+                "@attr": {
+                    "mtype": "leaf",
+                    "dtype": "int"
+                }
+            }
+        },
+        "Server": {
+            "@attr": {
+                "mtype": "container"
+            },
+            "Ip": {
+                "@attr": {
+                    "mtype": "leaf",
+                    "dtype": "string"
+                }
+            },
+            "Port": {
+                "@attr": {
+                    "mtype": "leaf",
+                    "dtype": "int"
+                }
+            }
+        }
+    }
+}

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
-
+#include <mdm/log.h>
+#include <mdm/macro.h>
 
 #endif
