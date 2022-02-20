@@ -73,7 +73,7 @@ int msg_init_queue()
 
 int msg_enqueue(mqtt_msg *msg)
 {
-    bool rt = rpa_queue_timedpush(msg_queue, (void *)&msg, MSG_QUEUE_TIMEOUT);
+    bool rt = rpa_queue_timedpush(msg_queue, (void *)msg, MSG_QUEUE_TIMEOUT);
     CHECK_DO_RTN_VAL(!rt, LOG_WARN("Failed to enqueue msg!"), -1);
 
     LOG_INFO("Succ to enqueue msg: %lld", (long long)msg);
