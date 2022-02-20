@@ -95,6 +95,7 @@ static void msg_delivered(void *context, MQTTClient_deliveryToken dt)
 static int msg_arrived(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
     (void) context;
+    (void) topicLen;
 
     char *payload = (char*) message->payload;
     int len = message->payloadlen;
