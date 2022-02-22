@@ -9,8 +9,8 @@ endif()
 
 if(ARM_BOARD)
 	message("build for arm board...")
-	set(CMAKE_C_COMPILER "/Library/Developer/CommandLineTools/usr/bin/gcc")
-	set(CMAKE_CXX_COMPILER "/Library/Developer/CommandLineTools/usr/bin/g++")
+	set(CMAKE_C_COMPILER "/home/easyboard/corelinux/v3ssdk/buildroot/out/host/bin/arm-buildroot-linux-gnueabihf-gcc")
+	set(CMAKE_CXX_COMPILER "/home/easyboard/corelinux/v3ssdk/buildroot/out/host/bin/arm-buildroot-linux-gnueabihf-g++")
 	
 	set(bsp_src ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp_arm/app.c)
 else()
