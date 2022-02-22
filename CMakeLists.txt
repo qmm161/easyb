@@ -7,8 +7,19 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE debug)
 endif()
 
-set(CMAKE_C_COMPILER "/Library/Developer/CommandLineTools/usr/bin/gcc")
-#set(CMAKE_CXX_COMPILER "/Library/Developer/CommandLineTools/usr/bin/g++")
+if(ARM_BOARD)
+	message("build for arm board...")
+	set(CMAKE_C_COMPILER "/Library/Developer/CommandLineTools/usr/bin/gcc")
+	set(CMAKE_CXX_COMPILER "/Library/Developer/CommandLineTools/usr/bin/g++")
+	
+	set(bsp_src ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp_arm/app.c)
+else()
+	message("build for fake...")
+	set(CMAKE_C_COMPILER "/Library/Developer/CommandLineTools/usr/bin/gcc")
+	set(CMAKE_CXX_COMPILER "/Library/Developer/CommandLineTools/usr/bin/g++")
+	
+	set(bsp_src ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp_fake/app.c)
+endif()
 
 set(CMAKE_C_FLAGS         "${CMAKE_C_FLAGS} -Wall -Wextra")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
@@ -28,6 +39,7 @@ set(easy_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/easy_board.h
 set(easy_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 ${CMAKE_CURRENT_SOURCE_DIR}/src/rpa_queue.c
 ${CMAKE_CURRENT_SOURCE_DIR}/src/msg_queue.c
+${bsp_src}
 ) 
 
 add_executable(easyb ${easy_srcs})
