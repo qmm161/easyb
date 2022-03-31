@@ -1,10 +1,26 @@
-//===============================================================================================
-//Date：20220306
-//Main：主函数
-//1)实现mqtt初始化并创建进程
-//2)实现设备模型的初始化
-//3）mqtt消息的循环处理
-//===============================================================================================
+//=================================================================================================
+//主程序控制Mplayer的播放
+//方法二：从有名管道(fifo)输入控制命令（应用编程中使用）
+// #mkfifo </tmp/fifofile>
+// #mplayer  -slave  -input  file=</tmp/fifofile> <movie>
+//用户可以通过往管道里写入slave命令来实现对应的功能
+//例：主进程创建一个无名管道和一个有名管道
+//1:开一个子进程
+//在子进程中：
+//启动Mplayer，参数规定通过命名管道进行通信；
+//把子进程的标准输出重定向无名管道的写端；
+//Mplayer从命名管道读到主进程发送的命令;
+//Mplayer发出的内容发送到无名管道中，父进程通过读管道就可以读到Mplayer发出的信息。
+//2：在父进程中：
+//启动两个线程
+//第一个线程，不断使用fgets从键盘获取一个字符串命令，并写入命名管道中
+//第二个线程，循环检测无名管道是否有信息可读，有信息将其打印输出在屏幕上
+//==============================================================================================
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +28,20 @@
 #include <mdm/data_repo.h>
 
 #include "easy_board.h"
-#include "msg_queue.h"
+#include "msg_queue.h"d
 #include "app.h"
 
+//------------------------------------------------------------
+//**********************全局变量定义区*****************
+int fd_fifo;					//创建有名管道，用于向mplayer发送命令
+int fd_pipe[2];					//创建无名管道,用于从mplayer读取命令
+
+//#define FIFO    "fifo"   
+//int  fd;  
+//int  pipedes[2];  
+//char  msg_buf[REC_MSG_CHNUM ] ; /*接收到信息缓冲区*/   
+//int  my_lock=0; //发送命令标志位   
+//-----------------------------------------------------------
 #define CLIENTID    "123456|securemode=3,signmethod=hmacsha1|"
 #define QOS         1
 #define TIMEOUT     10000L
@@ -214,7 +241,16 @@ int main(int argc, char *argv[])
 
     MQTTClient client = NULL;
     rt = mqtt_client_init(&client);
-
+	
+	//--------------------------------------------------
+    //建立Mplayer的播放管道，用于主程序控制Mplayer播放器
+    //建立管道
+	//已存在管道，先删除
+	unlink( "/tmp/Mplayer_fifo" );
+	//创建有名管道，控制Mplayer
+    mkfifo( "/tmp/Mplayer_fifo", 0777 );
+	
+	//--------------------------------------------------
     while(1){
         mqtt_msg *msg = msg_dequeue();
         if(msg){
