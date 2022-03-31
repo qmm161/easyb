@@ -48,7 +48,10 @@ int fd_pipe[2];					//创建无名管道,用于从mplayer读取命令
 
 volatile MQTTClient_deliveryToken deliveredtoken;
 
-
+//===========================================================================
+//mqtt模型数据修改
+//
+//============================================================================
 static int set_data(cJSON *input)
 {
     int rt = repo_edit_json(input);
@@ -61,7 +64,10 @@ static int get_data(cJSON *input)
     (void) input;
     return 0;
 }
-
+//===========================================================================
+//mqtt消息解析
+//
+//============================================================================
 static int handler_mqtt_msg(mqtt_msg *msg)
 {
     int rt = 0;
@@ -75,14 +81,20 @@ static int handler_mqtt_msg(mqtt_msg *msg)
 
     return rt;
 }
-
+//===========================================================================
+//mqtt消息转发
+//
+//============================================================================
 static void msg_delivered(void *context, MQTTClient_deliveryToken dt)
 {
     (void) context;
     LOG_INFO("Message with token value %d delivery confirmed\n", dt);
     deliveredtoken = dt;
 }
-
+//===========================================================================
+//mqtt消息处理
+//
+//============================================================================
 static int msg_arrived(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
     (void) context;
@@ -110,14 +122,20 @@ EXIT:
     MQTTClient_free(topicName);
     return 1;
 }
-
+//===========================================================================
+//mqtt链接问题
+//
+//============================================================================
 static void conn_lost(void *context, char *cause)
 {
     (void) context;
     LOG_INFO("\nConnection lost\n");
     LOG_INFO("     cause: %s\n", cause);
 }
-
+//===========================================================================
+//mqtt订阅topic
+//
+//============================================================================
 static int mqtt_subscribe_type_topic(MQTTClient client, char *buf, size_t buf_len, const char *type_name,
         const char *types, const char *def_type)
 {
@@ -156,7 +174,10 @@ static int mqtt_subscribe_type_topic(MQTTClient client, char *buf, size_t buf_le
 
     return 0;
 }
-
+//===========================================================================
+//初始化设备模型
+//依赖model和data两个文件
+//============================================================================
 static int subscribe_topics(MQTTClient client)
 {
     char buf[512];
@@ -179,7 +200,10 @@ static int subscribe_topics(MQTTClient client)
 
     return 0;
 }
-
+//===========================================================================
+//mqtt初始化
+//
+//============================================================================
 static int mqtt_client_init(MQTTClient *client)
 {
     MQTTClient_connectOptions connOpt = MQTTClient_connectOptions_initializer;
@@ -213,7 +237,10 @@ static int mqtt_client_init(MQTTClient *client)
 
     return 0;
 }
-
+//===========================================================================
+//初始化设备模型
+//依赖model和data两个文件
+//============================================================================
 static int mdm_repo_init(char *ws)
 {
     char model_path[100];
@@ -225,7 +252,12 @@ static int mdm_repo_init(char *ws)
     strncat(data_path, "/data.json", 100 - strlen(data_path) - 1);
     return repo_init(model_path, data_path);
 }
-
+//===========================================================================
+//Main主函数
+//创建mqtt线程
+//创建消息队列
+//初始化Mplayer有名管道
+//============================================================================
 int main(int argc, char *argv[])
 {
     if(argc < 2){
