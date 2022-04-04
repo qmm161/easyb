@@ -307,6 +307,11 @@ int main(int argc, char *argv[])
 	//创建有名管道，控制Mplayer
         mkfifo( "/tmp/Mplayer_fifo", 0777 );
 	
+	system("killall mplayer");
+	
+	//av_register_all();  
+    //avformat_network_init(); 
+	
 	initAudioDevice();
 	
 	pid_t pid = fork();
@@ -314,7 +319,9 @@ int main(int argc, char *argv[])
 		//子进程
 		//ssnprintf(cmd, 250, "/usr/bin/mplayer -slave -quiet -input file=/tmp/Mplayer_fifo %s &", url->valuestring);
 		//启动mplayer
+		system("ps\n");
 		execlp("/usr/bin/mplayer", "/usr/bin/mplayer", "-idle", "-slave","-quiet","-input", "file=/tmp/Mplayer_fifo", "/root/by.mp3", NULL);
+		system("ps\n");
 	} else if(pid > 0) {
 		rt = msg_init_queue();
 		LOG_INFO("init msg queue with rlt:%d", rt);
@@ -340,10 +347,12 @@ int main(int argc, char *argv[])
 				free_mqtt_msg(msg);
 			}
 		}
+		system("killall mplayer");
 		
 		close( Mplayer_fd );
 		MQTTClient_disconnect(client, 10000);
 		MQTTClient_destroy(&client);
+		system("killall mplayer");
 	}
 	
     

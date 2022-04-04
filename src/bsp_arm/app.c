@@ -14,48 +14,54 @@
 //-------------------------------------------------------------------------------------
 extern int Mplayer_fd; 
 extern int initAudioDevice();
+int MplayerRunning=0;
+int MplayerCurentFile=0;
 //============================================================================
 //执行Mplayer停止播放stop命令
 //============================================================================
 static int stop_play_audio(cJSON *input)
 {
-    (void) input;
-    const char *cmd = "stop\n";
-    write( Mplayer_fd, cmd, strlen(cmd) );
+    system("ps\n");
+	if(MplayerRunning==1)
+	 {	
+	  (void) input;
+      const char *cmd = "stop\n";
+      write( Mplayer_fd, cmd, strlen(cmd) );
+	  MplayerRunning=0;
+	 }
+	  system("ps\n");
     return 0;
 }
 //============================================================================
 //执行Mplayer启动播放play命令
+//网络播放，需要先做avcode的网络初始化配置，遗留问题
 //============================================================================
 static int play_audio(cJSON *input)
 {
      //启动新的播放文件，先停止
-
-	//const char *cmd1 = "stop\n";
-   // write( Mplayer_fd, cmd1, strlen(cmd1) ); 
-
- 
-	cJSON *url = input->child;
-	if(strcmp("url", url->string))
-	{
+	 // system("ps\n");
+	 cJSON *url = input->child;
+	 if(strcmp("url", url->string))
+	 {
 		LOG_WARN("invalid play audio msg.");
 		return -1;
-	}
+	 }
 
-	struct mdd_node *node = NULL;
-	int rt = repo_get("Data/Audio/Volumn", &node);
-	if(rt)
-	{
+	 struct mdd_node *node = NULL;
+	 int rt = repo_get("Data/Audio/Volumn", &node);
+	 if(rt)
+	 {
 		LOG_WARN("Failed to get volumn para");
 		return rt;
-	}
+	 }
 
         initAudioDevice();
 
-	char cmd[250];
-	snprintf(cmd, 250, "loadfile %s\n", url->valuestring);
+	 char cmd[250];
+	 snprintf(cmd, 250, "loadfile %s\n", url->valuestring);
 	 
-	write(Mplayer_fd, cmd, strlen(cmd));
+	 write(Mplayer_fd, cmd, strlen(cmd));
+	 // system("ps\n");
 	 return 0;
 }
 
@@ -94,6 +100,7 @@ static int mute_play_audio(cJSON *input)
 
 //============================================================================
 //Mplayer控制命令解析
+//问题：需要实现loadflie不同文件的比对，确认播放文件不同才做切换
 //============================================================================
 int handler_app_msg(mqtt_msg *msg)
 {
@@ -101,9 +108,14 @@ int handler_app_msg(mqtt_msg *msg)
 	 //播放命令
     if(!strcmp(msg->msg_name, "PlayAudio"))
 	  {
-        rt = stop_play_audio(msg->body);	
-		sleep(1);        
-	    rt = play_audio(msg->body);
+        if(MplayerRunning==0)
+		  {
+			 MplayerRunning=1;//先置1，让stop可以执行
+			 rt = stop_play_audio(msg->body);	
+		     sleep(3);        
+	         rt = play_audio(msg->body);
+			  MplayerRunning=1;//第2次置1，才是表示正在运行Mplayer
+		  }
       }
      //停止命令	  
 	else if(!strcmp(msg->msg_name, "StopAudio"))

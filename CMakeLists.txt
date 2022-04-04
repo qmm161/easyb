@@ -27,10 +27,12 @@ set(CMAKE_C_FLAGS_DEBUG   "-g -O0 -DDEBUG")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include 
 /usr/local/include
+/home/easyboard/corelinux/v3ssdk/app/include
 )
 
 link_directories(${easyb_BINARY_DIR} 
 /usr/local/lib
+/home/easyboard/corelinux/v3ssdk/buildroot/out/target/usr/lib
 )
 
 set(easy_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/easy_board.h
