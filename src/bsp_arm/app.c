@@ -12,117 +12,85 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 //-------------------------------------------------------------------------------------
-static pthread_t tid;
+extern int Mplayer_fd; 
+extern int initAudioDevice();
 
-static void* MplayerRtmp(void *arg)
-{
-    char *cmd = (char*) arg;
-    LOG_WARN("try to play:%s.", cmd);
-	//----------------------------------------------------------------------------------
-	//命令行配置
-	//shell command 配置播放设备
-	FILE *comm_fp_p = NULL;
-	char comm_ret[100] = {'0'};
-	//选择声卡设备
-	comm_fp_p = popen("amixer cset numid=17,iface=MIXER,name='Speaker Function' 0", "r");
- 	if(comm_fp_p == NULL)
-	    {
- 		  printf("shell error\n");
- 		  return 0;
- 		}
- 	while(fgets(comm_ret, sizeof(comm_ret) - 1, comm_fp_p) != NULL)
- 	 	  printf("amixer:\n%s\n", comm_ret);
- 	pclose(comm_fp_p);
-	
-	//配置音量
-	comm_fp_p = popen("amixer cset numid=1,iface=MIXER,name='Master Playback Volume' 200", "r");
- 	if(comm_fp_p == NULL)
-	    {
- 		  printf("shell error\n");
- 		  return 0;
- 		}
- 	while(fgets(comm_ret, sizeof(comm_ret) - 1, comm_fp_p) != NULL)
- 	 	  printf("amixer:\n%s\n", comm_ret);
- 	pclose(comm_fp_p);
-	
-	
-    //命令行播放mplayer
-	//重新播放，先杀mplayer进程
-	system("killall mplayer");
-	comm_fp_p = popen(cmd, "r");
- 	if(comm_fp_p == NULL)
-	    {
- 		  printf("shell mplayer error\n");
- 		  return 0;
- 		}
- 	while(fgets(comm_ret, sizeof(comm_ret) - 1, comm_fp_p) != NULL)
- 	 	  printf("amixer:\n%s\n", comm_ret);
- 	pclose(comm_fp_p);	
-	
-	//-----------------------------------------------------------------------------------	
-   // system(cmd);
-   // free(cmd);
-    pthread_exit(NULL);
-    return NULL;
-}
-
+//============================================================================
+//执行Mplayer启动播放play命令
+//============================================================================
 static int play_audio(cJSON *input)
 {
-    cJSON *url = input->child;
-    if(strcmp("url", url->string)){
-        LOG_WARN("invalid play audio msg.");
-        return -1;
-    }
 
-    struct mdd_node *node = NULL;
-    int rt = repo_get("Data/Audio/Volumn", &node);
-    if(rt){
-        LOG_WARN("Failed to get volumn para");
-        return rt;
-    }
+	cJSON *url = input->child;
+	if(strcmp("url", url->string))
+	{
+		LOG_WARN("invalid play audio msg.");
+		return -1;
+	}
 
-    char *cmd = (char*) calloc(1, 250);
+	struct mdd_node *node = NULL;
+	int rt = repo_get("Data/Audio/Volumn", &node);
+	if(rt)
+	{
+		LOG_WARN("Failed to get volumn para");
+		return rt;
+	}
 
-    //snprintf(cmd, 250, "/root/play.sh %lld %s", int_leaf_val(node), url->valuestring);
-	//mplayer配置为工作在slave模式，便于主程序通cmd管道命令来控制mplayer播放器
+        initAudioDevice();
 
-	snprintf(cmd, 250, "/usr/bin/mplayer -slave -quiet -input file=/tmp/Mplayer_fifo %s & ", url->valuestring);
-    pthread_create(&tid, NULL, MplayerRtmp, (void*) cmd);
-    return 0;
+	char cmd[250];
+	snprintf(cmd, 250, "loadfile %s\n", url->valuestring);
+	 
+	write(Mplayer_fd, cmd, strlen(cmd));
+	 return 0;
 }
 //============================================================================
-//有名管道传递命令，控制Mplayer 停止播放
+//执行Mplayer停止播放stop命令
 //============================================================================
-static int stop_play_audio(cJSON *input)
-{
-   int fd;
-   char s[] = "pause\n";
-   if( fork() > 0 )
-     {
-        fd = open( "/tmp/Mplayer_fifo", O_WRONLY );
-        write( fd, s, sizeof(s) );
-        close( fd );
-    }
-    return 0;
-}
-/*
 static int stop_play_audio(cJSON *input)
 {
     (void) input;
-    LOG_WARN("try to stop play.");
-    pthread_cancel(tid);
-    system("killall mplayer");
+    const char *cmd = "stop\n";
+    write( Mplayer_fd, cmd, strlen(cmd) );
     return 0;
 }
-*/
+//============================================================================
+//执行Mplayer静音播放mute命令
+//============================================================================
+static int mute_play_audio(cJSON *input)
+{
+    (void) input;
+    static int mute_value = 0;
+    mute_value = mute_value == 0 ? 1 : 0;
+    LOG_WARN("try to mute %d.", mute_value);
 
+    char cmd[50];
+    snprintf(cmd, 50, "mute %d\n", mute_value);
+    write( Mplayer_fd, cmd, strlen(cmd));
+
+    return 0;
+}
+
+//============================================================================
+//Mplayer控制命令解析
+//============================================================================
 int handler_app_msg(mqtt_msg *msg)
 {
     int rt = 0;
-    if(!strcmp(msg->msg_name, "PlayAudio")){
+	 //播放命令
+    if(!strcmp(msg->msg_name, "PlayAudio"))
+	  {
         rt = play_audio(msg->body);
-    } else if(!strcmp(msg->msg_name, "StopAudio")){
+      }
+     //停止命令	  
+	else if(!strcmp(msg->msg_name, "StopAudio"))
+	  {
         rt = stop_play_audio(msg->body);
+      }
+	 //静音命令 
+	else if(!strcmp(msg->msg_name, "MuteAudio")){
+        rt = mute_play_audio(msg->body);
     }
+	
     return rt;
 }

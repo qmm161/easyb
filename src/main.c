@@ -28,13 +28,14 @@
 #include <mdm/data_repo.h>
 
 #include "easy_board.h"
-#include "msg_queue.h"d
+#include "msg_queue.h"
 #include "app.h"
 
 //------------------------------------------------------------
 //**********************全局变量定义区*****************
 int fd_fifo;					//创建有名管道，用于向mplayer发送命令
 int fd_pipe[2];					//创建无名管道,用于从mplayer读取命令
+int Mplayer_fd;                 //mplayer管道文件
 
 //#define FIFO    "fifo"   
 //int  fd;  
@@ -252,6 +253,38 @@ static int mdm_repo_init(char *ws)
     strncat(data_path, "/data.json", 100 - strlen(data_path) - 1);
     return repo_init(model_path, data_path);
 }
+
+int initAudioDevice()
+{
+	//命令行配置
+	//shell command 配置播放设备
+	FILE *comm_fp_p = NULL;
+	char comm_ret[100] = {'0'};
+	//选择声卡设备
+	comm_fp_p = popen("amixer cset numid=17,iface=MIXER,name='Speaker Function' 0", "r");
+ 	if(comm_fp_p == NULL) {
+	  printf("shell error\n");
+	  return 0;
+	}
+ 	while(fgets(comm_ret, sizeof(comm_ret) - 1, comm_fp_p) != NULL) {
+ 	 	 printf("amixer:\n%s\n", comm_ret);
+	}
+ 	pclose(comm_fp_p);
+	
+	//配置音量
+	comm_fp_p = popen("amixer cset numid=1,iface=MIXER,name='Master Playback Volume' 200", "r");
+ 	if(comm_fp_p == NULL){
+	  printf("shell error\n");
+	  return 0;
+	}
+ 	while(fgets(comm_ret, sizeof(comm_ret) - 1, comm_fp_p) != NULL) {
+ 	 	 printf("amixer:\n%s\n", comm_ret);
+	}
+ 	pclose(comm_fp_p);
+	
+    return 0;
+}
+
 //===========================================================================
 //Main主函数
 //创建mqtt线程
@@ -260,40 +293,60 @@ static int mdm_repo_init(char *ws)
 //============================================================================
 int main(int argc, char *argv[])
 {
+    int rt = 0;
     if(argc < 2){
         LOG_WARN("Lack para: repo dir!");
         return 0;
     }
 
-    int rt = msg_init_queue();
-    LOG_INFO("init msg queue with rlt:%d", rt);
-
-    rt = mdm_repo_init(argv[1]);
-    LOG_INFO("init repo with rlt:%d", rt);
-
-    MQTTClient client = NULL;
-    rt = mqtt_client_init(&client);
-	
 	//--------------------------------------------------
     //建立Mplayer的播放管道，用于主程序控制Mplayer播放器
     //建立管道
 	//已存在管道，先删除
 	unlink( "/tmp/Mplayer_fifo" );
 	//创建有名管道，控制Mplayer
-    mkfifo( "/tmp/Mplayer_fifo", 0777 );
+        mkfifo( "/tmp/Mplayer_fifo", 0777 );
 	
-	//--------------------------------------------------
-    while(1){
-        mqtt_msg *msg = msg_dequeue();
-        if(msg){
-            LOG_INFO("dequeue msg with topic:%s", msg->topic);
-            rt = handler_mqtt_msg(msg);
-            LOG_INFO("handler mqtt msg rlt:%d", rt);
-            free_mqtt_msg(msg);
-        }
-    }
+	initAudioDevice();
+	
+	pid_t pid = fork();
+	if(pid == 0){
+		//子进程
+		//ssnprintf(cmd, 250, "/usr/bin/mplayer -slave -quiet -input file=/tmp/Mplayer_fifo %s &", url->valuestring);
+		//启动mplayer
+		execlp("/usr/bin/mplayer", "/usr/bin/mplayer", "-idle", "-slave","-quiet","-input", "file=/tmp/Mplayer_fifo", "/root/by.mp3", NULL);
+	} else if(pid > 0) {
+		rt = msg_init_queue();
+		LOG_INFO("init msg queue with rlt:%d", rt);
 
-    MQTTClient_disconnect(client, 10000);
-    MQTTClient_destroy(&client);
+		rt = mdm_repo_init(argv[1]);
+		LOG_INFO("init repo with rlt:%d", rt);
+
+		MQTTClient client = NULL;
+		rt = mqtt_client_init(&client);
+	
+		Mplayer_fd = open( "/tmp/Mplayer_fifo", O_WRONLY );
+		if (Mplayer_fd < 0) {
+			perror("open");
+		}
+		
+                LOG_INFO("open pipe %d", Mplayer_fd);
+		while(1){
+			mqtt_msg *msg = msg_dequeue();
+			if(msg){
+				LOG_INFO("dequeue msg with topic:%s", msg->topic);
+				rt = handler_mqtt_msg(msg);
+				LOG_INFO("handler mqtt msg rlt:%d", rt);
+				free_mqtt_msg(msg);
+			}
+		}
+		
+		close( Mplayer_fd );
+		MQTTClient_disconnect(client, 10000);
+		MQTTClient_destroy(&client);
+	}
+	
+    
+	//--------------------------------------------------
     return rt;
 }
