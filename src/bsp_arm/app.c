@@ -14,13 +14,27 @@
 //-------------------------------------------------------------------------------------
 extern int Mplayer_fd; 
 extern int initAudioDevice();
-
+//============================================================================
+//执行Mplayer停止播放stop命令
+//============================================================================
+static int stop_play_audio(cJSON *input)
+{
+    (void) input;
+    const char *cmd = "stop\n";
+    write( Mplayer_fd, cmd, strlen(cmd) );
+    return 0;
+}
 //============================================================================
 //执行Mplayer启动播放play命令
 //============================================================================
 static int play_audio(cJSON *input)
 {
+     //启动新的播放文件，先停止
 
+	//const char *cmd1 = "stop\n";
+   // write( Mplayer_fd, cmd1, strlen(cmd1) ); 
+
+ 
 	cJSON *url = input->child;
 	if(strcmp("url", url->string))
 	{
@@ -44,14 +58,21 @@ static int play_audio(cJSON *input)
 	write(Mplayer_fd, cmd, strlen(cmd));
 	 return 0;
 }
+
 //============================================================================
-//执行Mplayer停止播放stop命令
+//执行Mplayer暂停播放pause命令
 //============================================================================
-static int stop_play_audio(cJSON *input)
+static int pause_play_audio(cJSON *input)
 {
     (void) input;
-    const char *cmd = "stop\n";
-    write( Mplayer_fd, cmd, strlen(cmd) );
+    static int pause_value = 0;
+    pause_value = pause_value == 0 ? 1 : 0;
+    LOG_WARN("try to pause\n ");
+
+    char cmd[50];
+    snprintf(cmd, 50, "pause\n");
+    write( Mplayer_fd, cmd, strlen(cmd));
+
     return 0;
 }
 //============================================================================
@@ -80,7 +101,9 @@ int handler_app_msg(mqtt_msg *msg)
 	 //播放命令
     if(!strcmp(msg->msg_name, "PlayAudio"))
 	  {
-        rt = play_audio(msg->body);
+        rt = stop_play_audio(msg->body);	
+		sleep(1);        
+	    rt = play_audio(msg->body);
       }
      //停止命令	  
 	else if(!strcmp(msg->msg_name, "StopAudio"))
@@ -90,6 +113,10 @@ int handler_app_msg(mqtt_msg *msg)
 	 //静音命令 
 	else if(!strcmp(msg->msg_name, "MuteAudio")){
         rt = mute_play_audio(msg->body);
+    }
+	//暂停命令 
+	else if(!strcmp(msg->msg_name, "PauseAudio")){
+        rt = pause_play_audio(msg->body);
     }
 	
     return rt;
